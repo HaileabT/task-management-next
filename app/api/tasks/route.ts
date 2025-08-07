@@ -53,10 +53,7 @@ export async function GET(req: NextRequest) {
       take,
       skip,
       orderBy: { [orderBy]: order },
-      select: {
-        id: true,
-        title: true,
-        description: true,
+      include: {
         user: { select: { id: true, email: true } },
         categories: {
           select: {
