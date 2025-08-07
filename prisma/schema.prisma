@@ -15,30 +15,30 @@ datasource db {
   directUrl = env("REMOTE_DIRECT_DATABASE_URL")
 }
 
-model Users {
+model users {
   id        String   @id @default(uuid())
   username  String   @unique @db.VarChar(50)
   email     String   @unique @db.VarChar(200)
   password  String   @db.VarChar(60)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  tasks     Tasks[]
+  tasks     tasks[]
 
   @@index([id])
   @@index([email])
   @@index([username])
 }
 
-model Tasks {
+model tasks {
   id          String     @id @default(uuid())
   title       String     @db.VarChar(200)
   description String     @db.VarChar(5000)
   status      TaskStatus @default(PENDING)
 
-  user   Users  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user   users  @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId String
 
-  categories CategoriesOnTasks[]
+  categories categoriesOnTasks[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -54,19 +54,19 @@ enum TaskStatus {
   FAILED
 }
 
-model Categories {
+model categories {
   id    String              @id @default(uuid())
   name  String              @unique @db.VarChar(100)
-  tasks CategoriesOnTasks[]
+  tasks categoriesOnTasks[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
-model CategoriesOnTasks {
-  task       Tasks      @relation(fields: [taskId], references: [id], onDelete: Cascade)
+model categoriesOnTasks {
+  task       tasks      @relation(fields: [taskId], references: [id], onDelete: Cascade)
   taskId     String
-  category   Categories @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  category   categories @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   categoryId String
 
   @@id([taskId, categoryId])

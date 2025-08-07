@@ -1,24 +1,31 @@
-import { Prisma } from "@/generated/prisma";
+import { Prisma, TaskStatus } from "@/generated/prisma";
 import { prisma } from "@/lib/prisma";
 import { updateTaskSchema } from "@/lib/validation";
 import { NextRequest, NextResponse } from "next/server";
 
-export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
   try {
     let { id } = await params;
     if (!id) {
       return NextResponse.json({ error: "Bad Request" }, { status: 400 });
     }
 
-    const where: any = {};
-    if (id) where.id = { contains: id, mode: "insensitive" };
+    const userId = req.headers.get("x-user-id") || "";
+    if (!userId) {
+      return NextResponse.json(
+        { error: "Invalid token payload" },
+        { status: 401 },
+      );
+    }
+
+    const where: Prisma.tasksWhereUniqueInput = { id };
 
     const task = await prisma.tasks.findUnique({
       where,
-      select: {
-        id: true,
-        title: true,
-        description: true,
+      include: {
         user: {
           select: {
             username: true,
@@ -42,13 +49,25 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     if (!task) {
       return NextResponse.json({ error: "Post not found." }, { status: 404 });
     }
+
+    if (task.userId !== userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+    }
+
     return NextResponse.json(task);
   } catch (error) {
-    return NextResponse.json({ error: "Failed to fetch task", details: error }, { status: 500 });
+    console.log(error);
+    return NextResponse.json(
+      { error: "Failed to fetch task", details: error },
+      { status: 500 },
+    );
   }
 }
 
-export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
   try {
     const body = await req.json();
 
@@ -64,13 +83,14 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
           error: "Validation failed",
           details: validationResult.error.issues,
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
-    const { title, description, categories } = validationResult.data;
+    const { title, description, categories, status } = validationResult.data;
 
-    let categoryCreateOrConnect: Prisma.CategoriesOnTasksCreateWithoutTaskInput[] = [];
+    let categoryCreateOrConnect: Prisma.categoriesOnTasksCreateWithoutTaskInput[] =
+      [];
     if (categories && categories.length > 0) {
       categories.forEach(async (category) => {
         categoryCreateOrConnect.push({
@@ -86,7 +106,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
     const userId = req.headers.get("x-user-id") || "";
     if (!userId) {
-      return NextResponse.json({ error: "Invalid token payload" }, { status: 401 });
+      return NextResponse.json(
+        { error: "Invalid token payload" },
+        { status: 401 },
+      );
     }
 
     const user = await prisma.users.findUnique({ where: { id: userId } });
@@ -114,6 +137,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         title,
         description,
         userId: userId,
+        status: (status as TaskStatus) || oldTask.status,
         categories: {
           create: categoryCreateOrConnect,
         },
@@ -133,11 +157,17 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     });
     return NextResponse.json(post, { status: 200 });
   } catch (error) {
-    return NextResponse.json({ error: "Failed to update task", details: error }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to update task", details: error },
+      { status: 500 },
+    );
   }
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
   try {
     let { id } = await params;
     if (!id) {
@@ -146,9 +176,13 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
 
     const userId = req.headers.get("x-user-id") || "";
     if (!userId) {
-      return NextResponse.json({ error: "Invalid token payload" }, { status: 401 });
+      return NextResponse.json(
+        { error: "Invalid token payload" },
+        { status: 401 },
+      );
     }
     const oldTask = await prisma.tasks.findUnique({ where: { id } });
+    console.log(oldTask);
     if (!oldTask) {
       return NextResponse.json({ error: "Task not found." }, { status: 404 });
     }
@@ -157,8 +191,12 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     }
 
     const result = await prisma.tasks.delete({ where: { id } });
-    return NextResponse.json({ status: "successful" }, { status: 204 });
+    return new Response(null, { status: 204 });
   } catch (error) {
-    return NextResponse.json({ error: "Failed to delete task", details: error }, { status: 500 });
+    console.log(error);
+    return NextResponse.json(
+      { error: "Failed to delete task", details: error },
+      { status: 500 },
+    );
   }
 }

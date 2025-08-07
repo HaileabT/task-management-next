@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
           error: "Validation failed",
           details: validationResult.error.issues,
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -25,12 +25,18 @@ export async function POST(req: NextRequest) {
 
     const user = await prisma.users.findUnique({ where: { email } });
     if (!user || !user.password) {
-      return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
+      return NextResponse.json(
+        { error: "Invalid credentials" },
+        { status: 401 },
+      );
     }
 
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) {
-      return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
+      return NextResponse.json(
+        { error: "Invalid credentials" },
+        { status: 401 },
+      );
     }
 
     const token = jwt.sign({ userId: user.id, email: user.email }, JWT_SECRET, {
@@ -38,6 +44,10 @@ export async function POST(req: NextRequest) {
     });
     return NextResponse.json({ token });
   } catch (error) {
-    return NextResponse.json({ error: "Failed to login", details: error }, { status: 500 });
+    console.log(error);
+    return NextResponse.json(
+      { error: "Failed to login", details: error },
+      { status: 500 },
+    );
   }
 }

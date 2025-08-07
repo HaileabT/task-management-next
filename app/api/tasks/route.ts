@@ -6,9 +6,22 @@ import { $Enums, Prisma } from "@/generated/prisma";
 export async function GET(req: NextRequest) {
   try {
     type StatusType = $Enums.TaskStatus;
-    const validTaskStatus: StatusType[] | string[] = ["PENDING", "DONE", "FAILED", "IN_PROGRESS"];
+    const validTaskStatus: StatusType[] | string[] = [
+      "PENDING",
+      "DONE",
+      "FAILED",
+      "IN_PROGRESS",
+    ];
 
     const { searchParams } = new URL(req.url);
+
+    const userId = req.headers.get("x-user-id") || "";
+    if (!userId) {
+      return NextResponse.json(
+        { error: "Invalid token payload" },
+        { status: 401 },
+      );
+    }
 
     const take = parseInt(searchParams.get("take") || "10", 10);
     const skip = parseInt(searchParams.get("skip") || "0", 10);
@@ -20,8 +33,9 @@ export async function GET(req: NextRequest) {
     const status = searchParams.get("status");
     const title = searchParams.get("title");
 
-    const where: Prisma.TasksWhereInput = {};
+    const where: Prisma.tasksWhereInput = {};
     if (title) where.title = { contains: title, mode: "insensitive" };
+    where.userId = userId;
     if (category)
       where.categories = {
         some: {
@@ -31,7 +45,8 @@ export async function GET(req: NextRequest) {
         },
       };
 
-    if (status && validTaskStatus.includes(status as any)) where.status = status as StatusType;
+    if (status && validTaskStatus.includes(status as any))
+      where.status = status as StatusType;
 
     const tasks = await prisma.tasks.findMany({
       where,
@@ -52,7 +67,10 @@ export async function GET(req: NextRequest) {
     });
     return NextResponse.json(tasks);
   } catch (error) {
-    return NextResponse.json({ error: "Failed to fetch tasks", details: error }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to fetch tasks", details: error },
+      { status: 500 },
+    );
   }
 }
 
@@ -67,7 +85,7 @@ export async function POST(req: NextRequest) {
           error: "Validation failed",
           details: validationResult.error.issues,
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -75,9 +93,13 @@ export async function POST(req: NextRequest) {
 
     const userId = req.headers.get("x-user-id") || "";
     if (!userId) {
-      return NextResponse.json({ error: "Invalid token payload" }, { status: 401 });
+      return NextResponse.json(
+        { error: "Invalid token payload" },
+        { status: 401 },
+      );
     }
-    let categoryCreateOrConnect: Prisma.CategoriesOnTasksCreateWithoutTaskInput[] = [];
+    let categoryCreateOrConnect: Prisma.categoriesOnTasksCreateWithoutTaskInput[] =
+      [];
     if (categories && categories.length > 0) {
       categories.forEach(async (category) => {
         categoryCreateOrConnect.push({
@@ -91,11 +113,22 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    const user = await prisma.users.findUnique({ where: { id: userId } });
+    if (!user) {
+      return NextResponse.json(
+        { error: "User is not known." },
+        { status: 404 },
+      );
+    }
     const task = await prisma.tasks.create({
       data: {
         title,
         description: description ?? "",
-        userId: userId,
+        user: {
+          connect: {
+            id: userId,
+          },
+        },
         categories: {
           create: categoryCreateOrConnect,
         },
@@ -120,6 +153,10 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(task, { status: 201 });
   } catch (error) {
-    return NextResponse.json({ error: "Failed to create task", details: error }, { status: 500 });
+    console.log(error);
+    return NextResponse.json(
+      { error: "Failed to create task", details: error },
+      { status: 500 },
+    );
   }
 }

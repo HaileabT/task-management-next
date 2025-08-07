@@ -1,4 +1,13 @@
+import { $Enums } from "@/generated/prisma";
 import { z } from "zod";
+
+type StatusType = $Enums.TaskStatus;
+const validTaskStatus: StatusType[] | string[] = [
+  "PENDING",
+  "DONE",
+  "FAILED",
+  "IN_PROGRESS",
+];
 
 export const registerSchema = z.object({
   email: z.string().email("Invalid email format"),
@@ -21,6 +30,7 @@ export const updateTaskSchema = z.object({
   title: z.string().max(200, "Title too long.").optional(),
   description: z.string().max(5000, "Descripton too long.").optional(),
   categories: z.array(z.string()).optional().default(["General"]),
+  status: z.enum(validTaskStatus).optional(),
 });
 
 export const createCategorySchema = z.object({

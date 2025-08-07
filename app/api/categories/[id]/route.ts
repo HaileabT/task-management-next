@@ -2,7 +2,10 @@ import { prisma } from "@/lib/prisma";
 import { updateCategorySchema } from "@/lib/validation";
 import { NextRequest, NextResponse } from "next/server";
 
-export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
   try {
     let { id: idString } = await params;
     const id = parseInt(idString);
@@ -31,15 +34,24 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     });
 
     if (!category) {
-      return NextResponse.json({ error: "Category not found." }, { status: 404 });
+      return NextResponse.json(
+        { error: "Category not found." },
+        { status: 404 },
+      );
     }
     return NextResponse.json(category);
   } catch (error) {
-    return NextResponse.json({ error: "Failed to fetch posts", details: error }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to fetch posts", details: error },
+      { status: 500 },
+    );
   }
 }
 
-export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
   try {
     let { id } = await params;
     if (!id) {
@@ -61,7 +73,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     const validationResult = updateCategorySchema.safeParse(body);
 
     if (!validationResult.success) {
-      return NextResponse.json({ error: "Validation failed", details: validationResult.error.issues }, { status: 400 });
+      return NextResponse.json(
+        { error: "Validation failed", details: validationResult.error.issues },
+        { status: 400 },
+      );
     }
 
     const { name } = validationResult.data;
@@ -70,14 +85,20 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       where: { id },
     });
     if (!existingCategory) {
-      return NextResponse.json({ error: "Category does not exist" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Category does not exist" },
+        { status: 404 },
+      );
     }
 
     const anotherCategory = await prisma.categories.findUnique({
       where: { name },
     });
     if (anotherCategory) {
-      return NextResponse.json({ error: "Category with that name already exists" }, { status: 409 });
+      return NextResponse.json(
+        { error: "Category with that name already exists" },
+        { status: 409 },
+      );
     }
 
     const category = await prisma.categories.update({
@@ -87,14 +108,23 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     return NextResponse.json(category, { status: 201 });
   } catch (error) {
     if (error instanceof SyntaxError) {
-      return NextResponse.json({ error: "Invalid Request Body" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Invalid Request Body" },
+        { status: 400 },
+      );
     }
     console.error("Error creating category", error);
-    return NextResponse.json({ error: "Failed to create category", details: error }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to create category", details: error },
+      { status: 500 },
+    );
   }
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
   try {
     let { id } = await params;
     if (!id) {
@@ -103,7 +133,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
 
     const userId = req.headers.get("x-user-id");
 
-    if (!userId || isNaN(parseInt(userId))) {
+    if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -115,12 +145,18 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     const result = await prisma.categories.delete({
       where: { id },
     });
-    return NextResponse.json({ status: "successful" }, { status: 204 });
+    return new Response(null, { status: 204 });
   } catch (error) {
     if (error instanceof SyntaxError) {
-      return NextResponse.json({ error: "Invalid Request Body" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Invalid Request Body" },
+        { status: 400 },
+      );
     }
     console.error("Error creating category", error);
-    return NextResponse.json({ error: "Failed to create category", details: error }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to create category", details: error },
+      { status: 500 },
+    );
   }
 }
