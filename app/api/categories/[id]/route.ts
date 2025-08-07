@@ -42,7 +42,7 @@ export async function GET(
     return NextResponse.json(category);
   } catch (error) {
     return NextResponse.json(
-      { error: "Failed to fetch posts", details: error },
+      { error: "Failed to fetch tasks", details: error },
       { status: 500 },
     );
   }
