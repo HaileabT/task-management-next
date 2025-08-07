@@ -28,7 +28,7 @@ export async function GET(
               },
             },
           },
-          take: 20,
+          take: 10,
         },
       },
     });
@@ -39,7 +39,15 @@ export async function GET(
         { status: 404 },
       );
     }
-    return NextResponse.json(category);
+
+    let tasks = category.tasks.map((task) => task.task);
+    return NextResponse.json(
+      {
+        ...category,
+        tasks,
+      },
+      { status: 200 },
+    );
   } catch (error) {
     return NextResponse.json(
       { error: "Failed to fetch tasks", details: error },

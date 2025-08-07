@@ -65,7 +65,15 @@ export async function GET(req: NextRequest) {
         },
       },
     });
-    return NextResponse.json(tasks);
+
+    let cleanedTasks = tasks.map((task) => {
+      const categories = task.categories.map((category) => category.category);
+      return {
+        ...task,
+        categories,
+      };
+    });
+    return NextResponse.json(cleanedTasks, { status: 200 });
   } catch (error) {
     return NextResponse.json(
       { error: "Failed to fetch tasks", details: error },
@@ -133,10 +141,7 @@ export async function POST(req: NextRequest) {
           create: categoryCreateOrConnect,
         },
       },
-      select: {
-        id: true,
-        title: true,
-        description: true,
+      include: {
         user: { select: { id: true, email: true, username: true } },
         categories: {
           select: {
@@ -151,7 +156,14 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    return NextResponse.json(task, { status: 201 });
+    let categoriesArray = task.categories.map((category) => category.category);
+    return NextResponse.json(
+      {
+        ...task,
+        categories: categoriesArray,
+      },
+      { status: 201 },
+    );
   } catch (error) {
     console.log(error);
     return NextResponse.json(

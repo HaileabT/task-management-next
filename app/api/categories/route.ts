@@ -19,7 +19,10 @@ export async function POST(req: NextRequest) {
     const validationResult = createCategorySchema.safeParse({ name });
 
     if (!validationResult.success) {
-      return NextResponse.json({ error: "Validation failed", details: validationResult.error.issues }, { status: 400 });
+      return NextResponse.json(
+        { error: "Validation failed", details: validationResult.error.issues },
+        { status: 400 },
+      );
     }
 
     const existingCategory = await prisma.categories.findUnique({
@@ -27,7 +30,10 @@ export async function POST(req: NextRequest) {
     });
 
     if (existingCategory) {
-      return NextResponse.json({ error: "Category already exists" }, { status: 409 });
+      return NextResponse.json(
+        { error: "Category already exists" },
+        { status: 409 },
+      );
     }
 
     const category = await prisma.categories.create({
@@ -36,10 +42,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(category, { status: 201 });
   } catch (error) {
     if (error instanceof SyntaxError) {
-      return NextResponse.json({ error: "Invalid Request Body" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Invalid Request Body" },
+        { status: 400 },
+      );
     }
     console.error("Error creating category", error);
-    return NextResponse.json({ error: "Failed to create category", details: error }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to create category", details: error },
+      { status: 500 },
+    );
   }
 }
 
@@ -69,12 +81,23 @@ export async function GET(req: NextRequest) {
               },
             },
           },
-          take: 20,
+          take: 10,
         },
       },
     });
-    return NextResponse.json(categories);
+
+    let cleanedCategories = categories.map((category) => {
+      const tasks = category.tasks.map((task) => task.task);
+      return {
+        ...category,
+        tasks,
+      };
+    });
+    return NextResponse.json(cleanedCategories, { status: 200 });
   } catch (error) {
-    return NextResponse.json({ error: "Failed to fetch posts", details: error }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to fetch posts", details: error },
+      { status: 500 },
+    );
   }
 }

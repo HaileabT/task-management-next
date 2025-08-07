@@ -41,7 +41,7 @@ export async function GET(
               },
             },
           },
-          take: 5,
+          take: 10,
         },
       },
     });
@@ -54,7 +54,15 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
-    return NextResponse.json(task);
+    let categories = task.categories.map((category) => category.category);
+
+    return NextResponse.json(
+      {
+        ...task,
+        categories,
+      },
+      { status: 200 },
+    );
   } catch (error) {
     console.log(error);
     return NextResponse.json(
@@ -125,13 +133,15 @@ export async function PATCH(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const deleted = await prisma.categoriesOnTasks.deleteMany({
-      where: {
-        taskId: id,
-      },
-    });
+    if (categories && categories.length > 0) {
+      await prisma.categoriesOnTasks.deleteMany({
+        where: {
+          taskId: id,
+        },
+      });
+    }
 
-    const post = await prisma.tasks.update({
+    const task = await prisma.tasks.update({
       where: { id },
       data: {
         title,
@@ -147,6 +157,7 @@ export async function PATCH(
           select: {
             category: true,
           },
+          take: 10,
         },
         user: {
           omit: {
@@ -155,7 +166,15 @@ export async function PATCH(
         },
       },
     });
-    return NextResponse.json(post, { status: 200 });
+
+    let categoriesArray = task.categories.map((category) => category.category);
+    return NextResponse.json(
+      {
+        ...task,
+        categories: categoriesArray,
+      },
+      { status: 200 },
+    );
   } catch (error) {
     return NextResponse.json(
       { error: "Failed to update task", details: error },
