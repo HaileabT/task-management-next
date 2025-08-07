@@ -1,0 +1,73 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Users {
+  id        String   @id @default(uuid())
+  username  String   @unique @db.VarChar(50)
+  email     String   @unique @db.VarChar(200)
+  password  String   @db.VarChar(60)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  tasks     Tasks[]
+
+  @@index([id])
+  @@index([email])
+  @@index([username])
+}
+
+model Tasks {
+  id          String     @id @default(uuid())
+  title       String     @db.VarChar(200)
+  description String     @db.VarChar(5000)
+  status      TaskStatus @default(PENDING)
+
+  user   Users  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+
+  categories CategoriesOnTasks[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([id])
+  @@index([id, userId])
+}
+
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  DONE
+  FAILED
+}
+
+model Categories {
+  id    String              @id @default(uuid())
+  name  String              @unique @db.VarChar(100)
+  tasks CategoriesOnTasks[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model CategoriesOnTasks {
+  task       Tasks      @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  taskId     String
+  category   Categories @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  categoryId String
+
+  @@id([taskId, categoryId])
+  @@index([taskId, categoryId])
+}
